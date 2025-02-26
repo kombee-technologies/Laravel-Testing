@@ -99,66 +99,44 @@ class AuthController extends Controller
      */
     public function login(Request $request)
 {
-    $credentials = $request->only('email', 'password');
+    $credentials = [
+        'email' => $request->get('email'),
+        'password' => $request->get('password'),
+    ];
 
     if (!Auth::attempt($credentials)) {
-        return redirect()->back()->with('error', 'Invalid credentials');
+        return back()->withErrors(['error' => 'Invalid credentials']);
     }
 
     $user = Auth::user();
-    $token = $user->createToken('Web Token')->accessToken;
 
-    session(['api_token' => $token]); // Store token in session for future API calls
-
-    return redirect()->route('users.index')->with('success', 'User Logged in Successfully');
-}
-
-
-    /**
-     * Refresh Access Token
-     *
-     * @return \Illuminate\Http\JsonResponse
-     */
-    public function refreshToken(Request $request)
-    {
-        $validator = Validator::make($request->all(), [
-            'refresh_token' => 'required|string',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json(['error' => 'Refresh token is required'], 400);
-        }
-
-        $oauthClient = Client::where('password_client', 1)->latest()->first();
-        if (!$oauthClient) {
-            return response()->json(['error' => 'OAuth password client not found'], 404);
-        }
-
-        $data = [
-            'grant_type' => 'refresh_token',
-            'client_id' => $oauthClient->id,
-            'client_secret' => $oauthClient->secret,
-            'refresh_token' => $request->refresh_token,
-        ];
-
-        try {
-            $tokenRequest = app('request')->create('/oauth/token', 'POST', $data);
-            $response = app()->handle($tokenRequest);
-            $tokenResult = json_decode($response->getContent());
-
-            if (isset($tokenResult->access_token)) {
-                return response()->json([
-                    'access_token' => $tokenResult->access_token,
-                    'refresh_token' => $tokenResult->refresh_token,
-                    'expires_in' => $tokenResult->expires_in,
-                ]);
-            }
-
-            return response()->json(['error' => $tokenResult->error ?? 'Unknown error occurred'], 400);
-        } catch (\Exception $e) {
-            return response()->json(['error' => 'server_error', 'message' => $e->getMessage()], 500);
-        }
+    $oauthClient = Client::where('password_client', 1)->latest()->first();
+    if (!$oauthClient) {
+        return back()->withErrors(['error' => 'OAuth password client not found']);
     }
+
+    $data = [
+        'grant_type' => 'password',
+        'client_id' => $oauthClient->id,
+        'client_secret' => $oauthClient->secret,
+        'username' => $request->email,
+        'password' => $request->password,
+    ];
+
+    $tokenRequest = app('request')->create('/oauth/token', 'POST', $data);
+    $tokenResponse = json_decode(app()->handle($tokenRequest)->getContent());
+
+    if (isset($tokenResponse->access_token)) {
+        session(['access_token' => $tokenResponse->access_token]);
+
+        // return redirect()->route('users.index')->with('success', 'User logged in successfully');
+        // return dd(route('users.index')); // Check if it generates the correct URL
+        return redirect('http://127.0.0.1:8000/users')->with('success', 'User logged in successfully');
+
+    }
+
+    return back()->withErrors(['error' => 'Token generation failed']);
+}
 
     /**
      * Get Authenticated User

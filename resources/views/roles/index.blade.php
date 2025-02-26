@@ -2,60 +2,30 @@
 
 @section('content')
 <div class="container">
-    <h2>Manage User Roles</h2>
+    <h2>Roles</h2>
+    <a href="{{ route('roles.create') }}" class="btn btn-primary mb-3">Add Role</a>
 
-    @if(session('success'))
-        <div style="color: green;">{{ session('success') }}</div>
-    @endif
-
-    <table border="1">
-        <tr>
-            <th>ID</th>
-            <th>Name</th>
-            <th>Email</th>
-            <th>Roles</th>
-            <th>Assign Role</th>
-            <th>Remove Role</th>
-        </tr>
-        @foreach ($users as $user)
-        <tr>
-            <td>{{ $user->id }}</td>
-            <td>{{ $user->first_name }} {{ $user->last_name }}</td>
-            <td>{{ $user->email }}</td>
-            <td>
-                @if($user->roles && $user->roles->isNotEmpty())
-                    {{ implode(', ', $user->roles->pluck('name')->toArray()) }}
-                @else
-                    No roles assigned
-                @endif
-            </td>
-            <td>
-                <form action="{{ route('roles.assign', $user->id) }}" method="POST">
-                    @csrf
-                    <select name="role_id" required>
-                        <option value="">-- Choose Role --</option>
-                        @foreach ($roles as $role)
-                            <option value="{{ $role->id }}">{{ $role->name }}</option>
-                        @endforeach
-                    </select>
-                    <button type="submit">Assign</button>
-                </form>
-            </td>
-            <td>
-                @if($user->roles && $user->roles->isNotEmpty())
-                    @foreach ($user->roles as $role)
-                        <form action="{{ route('roles.remove', [$user->id, $role->id]) }}" method="POST" style="display: inline;">
-                            @csrf
-                            @method('DELETE')
-                            <button type="submit">Remove {{ $role->name }}</button>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach ($roles as $role)
+                <tr>
+                    <td>{{ $role->name }}</td>
+                    <td>
+                        <a href="{{ route('roles.edit', $role) }}" class="btn btn-warning">Edit</a>
+                        <form action="{{ route('roles.destroy', $role) }}" method="POST" style="display:inline;">
+                            @csrf @method('DELETE')
+                            <button type="submit" class="btn btn-danger" onclick="return confirm('Delete this role?')">Delete</button>
                         </form>
-                    @endforeach
-                @else
-                    No roles to remove
-                @endif
-            </td>
-        </tr>
-        @endforeach
+                    </td>
+                </tr>
+            @endforeach
+        </tbody>
     </table>
 </div>
 @endsection

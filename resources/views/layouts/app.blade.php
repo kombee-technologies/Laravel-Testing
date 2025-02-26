@@ -18,6 +18,8 @@
     <div class="container mt-4">
         @yield('content')
     </div>
+    {{-- <li><a href="{{ route('suppliers.index') }}" class="nav-link">Suppliers</a></li>
+    <li><a href="{{ route('customers.index') }}" class="nav-link">Customers</a></li> --}}
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
 </body>

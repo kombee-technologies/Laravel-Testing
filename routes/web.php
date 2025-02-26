@@ -25,7 +25,10 @@ Route::get('/get-cities', [UserController::class, 'getCities'])->name('get.citie
 
 
 
-
+// -----------------------------------------------------------
+Route::middleware(['auth'])->group(function () {
+    Route::get('/users', [UserController::class, 'index'])->name('users.index');
+});
 
 
 Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
@@ -34,7 +37,7 @@ Route::post('/login', [AuthController::class, 'login']);
 Route::get('/register', [AuthController::class, 'showRegisterForm'])->name('register');
 Route::post('/register', [AuthController::class, 'register']);
 
-
+// -----------------------------------------------------------------
 
 
 
@@ -80,3 +83,103 @@ Route::resource('roles', RoleController::class);
 Route::get('/roles/manage/{id}', [RoleController::class, 'manageRoles'])->name('roles.manage');
 Route::post('/roles/assign/{id}', [RoleController::class, 'assignRole'])->name('roles.assign');
 Route::post('/roles/remove/{id}', [RoleController::class, 'removeRole'])->name('roles.remove');
+
+
+
+
+
+
+
+
+
+
+
+
+
+// use App\Http\Controllers\UserExportController;
+// // use App\Http\Controllers\UserController;
+
+// Route::get('/export/csv', [UserExportController::class, 'exportCSV'])->name('export.csv');
+// Route::get('/export/excel', [UserExportController::class, 'exportExcel'])->name('export.excel');
+// Route::get('/export/pdf', [UserExportController::class, 'exportPDF'])->name('export.pdf');
+
+// Route::get('/users', [UserController::class, 'getUsers'])->name('users.list');
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// use App\Http\Controllers\RoleController;
+use App\Http\Controllers\UserRoleController;
+
+Route::resource('roles', RoleController::class);
+Route::get('user-roles', [UserRoleController::class, 'index'])->name('user.roles.index');
+Route::post('user-roles/{user}/attach', [UserRoleController::class, 'attachRole'])->name('user.roles.attach');
+Route::delete('user-roles/{user}/{role}', [UserRoleController::class, 'detachRole'])->name('user.roles.detach');
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+use App\Http\Controllers\SupplierController;
+use App\Http\Controllers\CustomerController;
+use Illuminate\Support\Facades\Gate;
+
+
+Route::middleware(['auth'])->group(function () {
+    Route::get('/suppliers', [SupplierController::class, 'index'])->name('suppliers.index');
+    Route::get('/suppliers/create', [SupplierController::class, 'create'])->name('suppliers.create')->middleware('can:manage-suppliers');
+    Route::post('/suppliers', [SupplierController::class, 'store'])->name('suppliers.store')->middleware('can:manage-suppliers');
+    Route::get('/suppliers/{supplier}/edit', [SupplierController::class, 'edit'])->name('suppliers.edit')->middleware('can:manage-suppliers');
+    Route::put('/suppliers/{supplier}', [SupplierController::class, 'update'])->name('suppliers.update')->middleware('can:manage-suppliers');
+    Route::delete('/suppliers/{supplier}', [SupplierController::class, 'destroy'])->name('suppliers.destroy')->middleware('can:manage-suppliers');
+});
+
+
+
+Route::middleware(['auth'])->group(function () {
+    Route::resource('customers', CustomerController::class);
+});
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Route::get('/users/export/csv', [UserController::class, 'exportCsv'])->name('users.export.csv');
+Route::get('/users/export/excel', [UserController::class, 'exportExcel'])->name('users.export.excel');
+Route::get('/users/export/pdf', [UserController::class, 'exportPdf'])->name('users.export.pdf');
+Route::get('/api/users', [UserController::class, 'getUsers'])->name('api.users');

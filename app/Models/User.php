@@ -8,13 +8,13 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Passport\HasApiTokens;
-use Spatie\Permission\Traits\HasRoles;
+// use Spatie\Permission\Traits\HasRoles;
 
 
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasRoles,HasApiTokens,HasFactory, Notifiable;
+    use HasApiTokens,HasFactory, Notifiable;
 
     /**
      * The attributes that are mass assignable.
@@ -31,7 +31,7 @@ class User extends Authenticatable
     ];
 
     protected $casts = [
-        'roles' => 'array',
+        // 'roles' => 'array',
         'hobbies' => 'array',
         'uploaded_files' => 'array',
     ];
@@ -68,12 +68,17 @@ class User extends Authenticatable
 
 
 
-    public function roles()
-{
-    return $this->belongsToMany(Role::class, 'role_user', 'user_id', 'role_id');
-}
+    public function roles(): BelongsToMany
+    {
+        return $this->belongsToMany(Role::class);
+    }
 
    
+
+    public function hasRole($role)
+{
+    return $this->roles->contains('name', $role);
+}
 
 
 
