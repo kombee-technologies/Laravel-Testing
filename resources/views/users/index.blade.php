@@ -25,7 +25,11 @@
                     <i class="bi bi-people"></i> Customers
                 </a>
             </div>
+            <div>
+                <input type="text" id="searchInput" class="form-control" placeholder="Search users...">
+            </div>
         </div>
+        
         <div class="card-body">
             {{-- Flash Messages --}}
             @if(session('success'))
@@ -101,59 +105,7 @@
                         </tr>
                     </thead>
                     <tbody id="usersTableBody">
-                        @forelse($users as $user)
-                        <tr>
-                            <td>{{ $user->id }}</td>
-                            <td>{{ $user->first_name }}</td>
-                            <td>{{ $user->last_name }}</td>
-                            <td>{{ $user->email }}</td>
-                            <td>{{ $user->contact_number }}</td>
-                            <td>{{ $user->postcode }}</td>
-                            <td>{{ ucfirst($user->gender) }}</td>
-                            <td>{{ $user->state->name ?? 'N/A' }}</td>
-                            <td>{{ $user->city->name ?? 'N/A' }}</td>
-                            <td>
-                                @foreach($user->roles as $role)
-                                    <span class="badge bg-primary">{{ $role->name }}</span>
-                                @endforeach
-                            </td>
-                             <td>
-                                @foreach(json_decode($user->hobbies, true) ?? [] as $hobby)
-                                    <span class="badge bg-secondary">{{ $hobby }}</span>
-                                @endforeach
-                            </td>
-                            <td>
-                                @if($user->uploaded_files)
-                                    @foreach(json_decode($user->uploaded_files, true) as $file)
-                                        <a href="{{ asset('storage/' . $file) }}" target="_blank">{{ basename($file) }}</a><br>
-                                    @endforeach
-                                @else
-                                    N/A
-                                @endif
-                            </td>
-                            <td>
-                                @can('manage-users')
-                                <a href="{{ route('users.edit', $user->id) }}" class="btn btn-warning btn-sm">
-                                    <i class="bi bi-pencil-square"></i> Edit
-                                </a>
-
-                                @if($user->id != Auth::id())
-                                <form action="{{ route('users.destroy', $user->id) }}" method="POST" class="d-inline delete-form">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="btn btn-danger btn-sm">
-                                        <i class="bi bi-trash"></i> Delete
-                                    </button>
-                                </form>
-                                @endif
-                                @endcan
-                            </td>
-                        </tr>
-                        @empty
-                        <tr>
-                            <td colspan="13" class="text-center">No users found.</td>
-                        </tr>
-                        @endforelse
+                        {{-- Users will be loaded dynamically via AJAX --}}
                     </tbody>
                 </table>
             </div>
@@ -161,28 +113,7 @@
             {{-- Pagination --}}
             <div id="pagination" class="d-flex justify-content-center mt-4">
                 <nav>
-                    <ul class="pagination">
-                        {{-- Previous Page Link --}}
-                        <li class="page-item {{ $users->onFirstPage() ? 'disabled' : '' }}">
-                            <a class="page-link" href="{{ $users->previousPageUrl() }}" tabindex="-1" aria-disabled="{{ $users->onFirstPage() ? 'true' : 'false' }}">
-                                <i class="bi bi-chevron-left"></i> Prev
-                            </a>
-                        </li>
-
-                        {{-- Page Number Links --}}
-                        @for ($i = 1; $i <= $users->lastPage(); $i++)
-                            <li class="page-item {{ $i == $users->currentPage() ? 'active' : '' }}">
-                                <a class="page-link" href="{{ $users->url($i) }}">{{ $i }}</a>
-                            </li>
-                        @endfor
-
-                        {{-- Next Page Link --}}
-                        <li class="page-item {{ $users->hasMorePages() ? '' : 'disabled' }}">
-                            <a class="page-link" href="{{ $users->nextPageUrl() }}">
-                                Next <i class="bi bi-chevron-right"></i>
-                            </a>
-                        </li>
-                    </ul>
+                    <ul class="pagination"></ul>
                 </nav>
             </div>
         </div>
@@ -190,33 +121,28 @@
 </div>
 
 {{-- JavaScript for Delete Confirmation and AJAX --}}
-{{-- JavaScript for Delete Confirmation and AJAX Pagination --}}
 <script>
     document.addEventListener("DOMContentLoaded", function () {
-        const deleteForms = document.querySelectorAll(".delete-form");
-        deleteForms.forEach((form) => {
-            form.addEventListener("submit", function (event) {
-                event.preventDefault();
-                if (confirm("Are you sure you want to delete this user?")) {
-                    this.submit();
-                }
-            });
-        });
-
         // Initial Load Users
-        loadUsers();
+        loadUsers(1);
 
         // Load users dynamically via AJAX
-        function loadUsers(page = 1) {
-            fetch(`/users?page=${page}`)
-                .then(response => response.json())
-                .then(data => {
-                    updateUsersTable(data.data);
-                    updatePagination(data.links, data.current_page, data.last_page);
-                })
-                .catch(error => {
-                    console.error('Error loading users:', error);
-                });
+        function loadUsers(page = 1, search = '') {
+            $.ajax({
+                url: `/api/users?page=${page}&search=${search}`,
+                type: "GET",
+                dataType: "json",
+                headers: {
+                    Authorization: "Bearer " + localStorage.getItem("access_token")
+                },
+                success: function(response) {
+                    updateUsersTable(response.data);
+                    updatePagination(response);
+                },
+                error: function(xhr) {
+                    console.error("Error loading users:", xhr.responseText);
+                }
+            });
         }
 
         // Update the Users Table
@@ -233,19 +159,45 @@
 
             users.forEach(user => {
                 const tr = document.createElement('tr');
-                let rolesHtml = user.roles.map(role => `<span class="badge bg-primary">${role.name}</span>`).join(' ');
-                let hobbiesHtml = (user.hobbies || []).map(hobby => `<span class="badge bg-secondary">${hobby}</span>`).join(' ');
-                let filesHtml = (user.uploaded_files || []).map(file => `<a href="/storage/${file}" target="_blank">${file.split('/').pop()}</a><br>`).join(' ') || 'N/A';
+                
+                // Format roles as badges
+                let rolesHtml = user.roles.map(role => 
+                    `<span class="badge bg-primary">${role.name}</span>`
+                ).join(' ');
+                
+                // Format hobbies as badges
+                let hobbiesArray = Array.isArray(user.hobbies) ? user.hobbies : 
+                                  (typeof user.hobbies === 'string' ? JSON.parse(user.hobbies) : []);
+                let hobbiesHtml = hobbiesArray.map(hobby => 
+                    `<span class="badge bg-secondary">${hobby}</span>`
+                ).join(' ');
+                
+                // Format uploaded files as links
+                let filesArray = user.uploaded_files ? 
+                               (Array.isArray(user.uploaded_files) ? user.uploaded_files : 
+                               JSON.parse(user.uploaded_files)) : [];
+                let filesHtml = filesArray.length > 0 ? 
+                              filesArray.map(file => 
+                                `<a href="/storage/${file}" target="_blank">${file.split('/').pop()}</a><br>`
+                              ).join('') : 'N/A';
 
-                let actionsHtml = '';
-                if (user.id !== {{ Auth::id() }}) {
-                    actionsHtml = `
-                        <a href="/users/${user.id}/edit" class="btn btn-warning btn-sm"><i class="bi bi-pencil-square"></i> Edit</a>
-                        <form action="/users/${user.id}" method="POST" class="d-inline delete-form">
-                            @csrf
-                            @method('DELETE')
-                            <button type="submit" class="btn btn-danger btn-sm"><i class="bi bi-trash"></i> Delete</button>
-                        </form>
+                // Create actions buttons based on permissions
+                let actionsHtml = `
+                @can('manage-users')
+                    <a href="/users/${user.id}/edit" class="btn btn-warning btn-sm">
+                        <i class="bi bi-pencil-square"></i> Edit
+                    </a>
+                    @endcan
+                    `;
+                
+                if (user.id != localStorage.getItem("user_id")) {
+                    actionsHtml += `
+                     @can('manage-users')
+                        <button class="btn btn-danger btn-sm delete-user" data-id="${user.id}">
+                            <i class="bi bi-trash"></i> Delete
+                        </button>
+                                            @endcan
+
                     `;
                 }
 
@@ -256,9 +208,9 @@
                     <td>${user.email}</td>
                     <td>${user.contact_number}</td>
                     <td>${user.postcode}</td>
-                    <td>${user.gender}</td>
-                    <td>${user.state_name || 'N/A'}</td>
-                    <td>${user.city_name || 'N/A'}</td>
+                    <td>${ucFirst(user.gender)}</td>
+                    <td>${user.state?.name || 'N/A'}</td>
+                    <td>${user.city?.name || 'N/A'}</td>
                     <td>${rolesHtml}</td>
                     <td>${hobbiesHtml}</td>
                     <td>${filesHtml}</td>
@@ -266,22 +218,95 @@
                 `;
                 tbody.appendChild(tr);
             });
-        }
 
-        // Update Pagination Links
-        function updatePagination(links, currentPage, lastPage) {
-            const pagination = document.getElementById('pagination');
-            pagination.innerHTML = links;
-
-            const paginationLinks = pagination.querySelectorAll('.page-link');
-            paginationLinks.forEach(link => {
-                link.addEventListener('click', function (e) {
-                    e.preventDefault();
-                    const page = this.getAttribute('href').split('page=')[1];
-                    loadUsers(page);
+            // Add event listeners to delete buttons
+            document.querySelectorAll(".delete-user").forEach(button => {
+                button.addEventListener("click", function() {
+                    deleteUser(this.getAttribute("data-id"));
                 });
             });
         }
+
+        // Helper function to capitalize first letter
+        function ucFirst(string) {
+            if (!string) return '';
+            return string.charAt(0).toUpperCase() + string.slice(1);
+        }
+
+        // Update Pagination Links
+        function updatePagination(response) {
+            const paginationElement = document.querySelector('#pagination ul');
+            paginationElement.innerHTML = '';
+
+            if (response.total <= response.per_page) return;
+
+            // Previous button
+            const prevDisabled = response.current_page === 1 ? "disabled" : "";
+            const prevLi = document.createElement('li');
+            prevLi.className = `page-item ${prevDisabled}`;
+            prevLi.innerHTML = `
+                <a class="page-link" href="#" data-page="${response.current_page - 1}">
+                    <i class="bi bi-chevron-left"></i> Prev
+                </a>
+            `;
+            paginationElement.appendChild(prevLi);
+
+            // Page numbers
+            for (let i = 1; i <= response.last_page; i++) {
+                const activeClass = i === response.current_page ? "active" : "";
+                const pageLi = document.createElement('li');
+                pageLi.className = `page-item ${activeClass}`;
+                pageLi.innerHTML = `
+                    <a class="page-link" href="#" data-page="${i}">${i}</a>
+                `;
+                paginationElement.appendChild(pageLi);
+            }
+
+            // Next button
+            const nextDisabled = response.current_page === response.last_page ? "disabled" : "";
+            const nextLi = document.createElement('li');
+            nextLi.className = `page-item ${nextDisabled}`;
+            nextLi.innerHTML = `
+                <a class="page-link" href="#" data-page="${response.current_page + 1}">
+                    Next <i class="bi bi-chevron-right"></i>
+                </a>
+            `;
+            paginationElement.appendChild(nextLi);
+
+            // Add event listeners to pagination links
+            document.querySelectorAll(".page-link").forEach(link => {
+                link.addEventListener("click", function(e) {
+                    e.preventDefault();
+                    loadUsers(this.getAttribute("data-page"), document.getElementById("searchInput").value);
+                });
+            });
+        }
+
+        // Handle user deletion
+        function deleteUser(userId) {
+            if (!confirm("Are you sure you want to delete this user?")) return;
+
+            $.ajax({
+                url: `/api/users/${userId}`,
+                type: "DELETE",
+                headers: {
+                    Authorization: "Bearer " + localStorage.getItem("access_token")
+                },
+                success: function() {
+                    alert("User deleted successfully.");
+                    loadUsers(1, document.getElementById("searchInput").value);
+                },
+                error: function(xhr) {
+                    alert("Error deleting user: " + xhr.responseText);
+                    console.error("Error deleting user:", xhr.responseText);
+                }
+            });
+        }
+
+        // Search functionality
+        document.getElementById("searchInput").addEventListener("keyup", function() {
+            loadUsers(1, this.value);
+        });
     });
 </script>
 

@@ -29,7 +29,7 @@ class AppServiceProvider extends ServiceProvider
         Passport::enablePasswordGrant();
         //Passport::hashClientSecrets();
 
-        Passport::tokensExpireIn(now()->addMinutes(30));
+        Passport::tokensExpireIn(now()->addMinutes(120));
         Passport::refreshTokensExpireIn(now()->addDays(7));
         Passport::personalAccessTokensExpireIn(now()->addMonths(6));
    

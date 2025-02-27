@@ -21,29 +21,39 @@ use Illuminate\Support\Facades\Auth;
 
 
 class UserController extends Controller {
-    // public function index() {
-    //     $users = User::with(['city', 'state', 'roles'])->paginate(3);
-    //     return view('users.index', compact('users'));
-    // }
-
-   // In your controller
-public function index(Request $request)
-{
-    $users = User::with('roles', 'state', 'city') // eager load only necessary relations
-        ->paginate(3); // paginate with 10 records per page
-
-    if ($request->ajax()) {
-        return response()->json([
-            'data' => $users->items(),
-            'links' => $users->appends($request->all())->render('pagination::bootstrap-4'), // pagination links for frontend
-            'current_page' => $users->currentPage(),
-            'last_page' => $users->lastPage(),
-        ]);
+    public function index(Request $request)
+    {
+        $query = User::with(['city', 'state', 'roles'])->where('id', '!=', Auth::id());
+    
+        if ($request->has('search')) {
+            $search = $request->input('search');
+            $query->where(function ($q) use ($search) {
+                $q->where('first_name', 'like', "%$search%")
+                  ->orWhere('last_name', 'like', "%$search%")
+                  ->orWhere('email', 'like', "%$search%");
+            });
+        }
+    
+        if ($request->ajax()) {
+            return response()->json($query->paginate(5));
+        }
+    
+        $users = $query->paginate(5);
+        return view('users.index', compact('users'));
     }
 
-    return view('users.index', compact('users'));
-}
+  
+//    public function index(Request $request) {
+//     $query = User::with(['city', 'state', 'roles'])->where('id', '!=', Auth::id());
 
+//     if ($request->ajax()) {
+//         return response()->json($query->paginate(3));
+//     }
+
+//     $users = $query->paginate(3);
+//     return view('users.index', compact('users'));
+// }
+   
 
 
 
@@ -197,25 +207,20 @@ public function index(Request $request)
         );
     }
 
-    // Export users to CSV
-    public function exportCsv(): BinaryFileResponse
-    {
-        return Excel::download(new UsersExport, 'users.csv');
-    }
+    // CSV Export
+public function exportCSV() {
+    return Excel::download(new UsersExport, 'users.csv');
+}
 
-    // Export users to Excel
-    public function exportExcel(): BinaryFileResponse
-    {
-        return Excel::download(new UsersExport, 'users.xlsx');
-    }
+// Excel Export
+public function exportExcel() {
+    return Excel::download(new UsersExport, 'users.xlsx');
+}
 
-    // Export users to PDF
-    public function exportPdf()
-    {
-        $users = User::where('id', '!=', Auth::id())
-                    ->with(['city', 'state', 'roles'])
-                    ->get();
-        $pdf = Pdf::loadView('exports.users', compact('users'));
-        return $pdf->download('users.pdf');
-    }
+// PDF Export
+public function exportPDF() {
+    $users = User::with(['city', 'state', 'roles'])->where('id', '!=', Auth::id())->get();
+    $pdf = Pdf::loadView('exports.users_pdf', compact('users'));
+    return $pdf->download('users.pdf');
+}
 }

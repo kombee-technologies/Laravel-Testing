@@ -1,3 +1,4 @@
+
 <?php
 
 use Illuminate\Support\Facades\Route;
@@ -59,26 +60,9 @@ Route::delete('/users/{user}/roles/{role}', [RoleController::class, 'removeRole'
 
 
 
-// use App\Http\Controllers\RoleController;
 
-// Route::get('/assign-role/{userId}/{roleId}', [RoleController::class, 'assignRole']);
-
-
-// use App\Http\Controllers\RoleController;
 
 Route::resource('roles', RoleController::class);
-
-// Route::get('/users/{user}/assign-role', [RoleController::class, 'showAssignRoleForm'])->name('roles.show');
-// Route::post('/assign-role/{user}', [RoleController::class, 'assignRole'])->name('roles.assign');
-// Route::post('/remove-role/{user}', [RoleController::class, 'removeRole'])->name('roles.remove');
-
-
-// Route::get('/roles', [RoleController::class, 'index'])->name('roles.index');
-// Route::post('/roles/assign/{user}', [RoleController::class, 'assignRole'])->name('roles.assign');
-// Route::post('/roles/remove/{user}', [RoleController::class, 'removeRole'])->name('roles.remove');
-
-
-
 
 Route::get('/roles/manage/{id}', [RoleController::class, 'manageRoles'])->name('roles.manage');
 Route::post('/roles/assign/{id}', [RoleController::class, 'assignRole'])->name('roles.assign');
@@ -86,41 +70,6 @@ Route::post('/roles/remove/{id}', [RoleController::class, 'removeRole'])->name('
 
 
 
-
-
-
-
-
-
-
-
-
-
-// use App\Http\Controllers\UserExportController;
-// // use App\Http\Controllers\UserController;
-
-// Route::get('/export/csv', [UserExportController::class, 'exportCSV'])->name('export.csv');
-// Route::get('/export/excel', [UserExportController::class, 'exportExcel'])->name('export.excel');
-// Route::get('/export/pdf', [UserExportController::class, 'exportPDF'])->name('export.pdf');
-
-// Route::get('/users', [UserController::class, 'getUsers'])->name('users.list');
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// use App\Http\Controllers\RoleController;
 use App\Http\Controllers\UserRoleController;
 
 Route::resource('roles', RoleController::class);
@@ -131,19 +80,8 @@ Route::delete('user-roles/{user}/{role}', [UserRoleController::class, 'detachRol
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+/* This code snippet is defining routes related to managing suppliers and customers in a Laravel
+application. Here's a breakdown of what the code is doing: */
 use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\CustomerController;
 use Illuminate\Support\Facades\Gate;
@@ -165,21 +103,15 @@ Route::middleware(['auth'])->group(function () {
 });
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+/* These routes are defining endpoints for exporting user data in different formats and retrieving user
+data via an API. */
 Route::get('/users/export/csv', [UserController::class, 'exportCsv'])->name('users.export.csv');
 Route::get('/users/export/excel', [UserController::class, 'exportExcel'])->name('users.export.excel');
 Route::get('/users/export/pdf', [UserController::class, 'exportPdf'])->name('users.export.pdf');
 Route::get('/api/users', [UserController::class, 'getUsers'])->name('api.users');
+
+
+
+
+
+

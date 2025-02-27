@@ -97,24 +97,69 @@ class AuthController extends Controller
      *
      * @return \Illuminate\Http\JsonResponse
      */
-    public function login(Request $request)
+//     public function login(Request $request)
+// {
+//     $credentials = [
+//         'email' => $request->get('email'),
+//         'password' => $request->get('password'),
+//     ];
+
+//     if (!Auth::attempt($credentials)) {
+//         return back()->withErrors(['error' => 'Invalid credentials']);
+//     }
+
+//     $user = Auth::user();
+
+//     $oauthClient = Client::where('password_client', 1)->latest()->first();
+//     if (!$oauthClient) {
+//         return back()->withErrors(['error' => 'OAuth password client not found']);
+//     }
+
+//     $data = [
+//         'grant_type' => 'password',
+//         'client_id' => $oauthClient->id,
+//         'client_secret' => $oauthClient->secret,
+//         'username' => $request->email,
+//         'password' => $request->password,
+//     ];
+
+//     $tokenRequest = app('request')->create('/oauth/token', 'POST', $data);
+//     $tokenResponse = json_decode(app()->handle($tokenRequest)->getContent());
+
+//     if (isset($tokenResponse->access_token)) {
+//         session(['access_token' => $tokenResponse->access_token]);
+
+//         // return redirect()->route('users.index')->with('success', 'User logged in successfully');
+//         // return dd(route('users.index')); // Check if it generates the correct URL
+//         return redirect('http://127.0.0.1:8000/users')->with('success', 'User logged in successfully');
+
+//     }
+
+//     return back()->withErrors(['error' => 'Token generation failed']);
+// }
+
+
+
+public function login(Request $request)
 {
     $credentials = [
-        'email' => $request->get('email'),
-        'password' => $request->get('password'),
+        'email' => $request->email,
+        'password' => $request->password,
     ];
 
     if (!Auth::attempt($credentials)) {
-        return back()->withErrors(['error' => 'Invalid credentials']);
+        return response()->json(['error' => 'Invalid credentials'], 401);
     }
 
     $user = Auth::user();
 
+    // Fetch OAuth client for password grant
     $oauthClient = Client::where('password_client', 1)->latest()->first();
     if (!$oauthClient) {
-        return back()->withErrors(['error' => 'OAuth password client not found']);
+        return response()->json(['error' => 'OAuth password client not found'], 500);
     }
 
+    // Prepare data for OAuth token request
     $data = [
         'grant_type' => 'password',
         'client_id' => $oauthClient->id,
@@ -127,16 +172,21 @@ class AuthController extends Controller
     $tokenResponse = json_decode(app()->handle($tokenRequest)->getContent());
 
     if (isset($tokenResponse->access_token)) {
-        session(['access_token' => $tokenResponse->access_token]);
-
-        // return redirect()->route('users.index')->with('success', 'User logged in successfully');
-        // return dd(route('users.index')); // Check if it generates the correct URL
-        return redirect('http://127.0.0.1:8000/users')->with('success', 'User logged in successfully');
-
+        return response()->json([
+            'access_token' => $tokenResponse->access_token,
+            'token_type' => 'Bearer',
+            'expires_in' => $tokenResponse->expires_in,
+        ]);
     }
 
-    return back()->withErrors(['error' => 'Token generation failed']);
+    return response()->json(['error' => 'Token generation failed'], 500);
 }
+
+
+
+
+
+
 
     /**
      * Get Authenticated User
