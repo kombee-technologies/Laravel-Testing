@@ -12,7 +12,7 @@ return new class extends Migration
     public function up()
     {
         Schema::table('suppliers', function (Blueprint $table) {
-            $table->string('company_name')->after('address');
+            $table->string('company_name');
             $table->string('gst_number')->nullable()->after('company_name');
             $table->string('website')->nullable()->after('gst_number');
             $table->string('country')->after('website');
